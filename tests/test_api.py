@@ -68,9 +68,6 @@ class CaseTest:
 class TestApi:
 
     def _run_picire(self, interesting, config, expect, granularity, dd, split, subset_first, subset_iterator, complement_iterator, cache):
-        if dd != picire.DD:
-            cache = picire.shared_cache_decorator(cache)
-
         logging.basicConfig(format='%(message)s')
         logging.getLogger('picire').setLevel(logging.DEBUG)
 

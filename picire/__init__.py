@@ -17,6 +17,5 @@ from .limit_reduction import LimitReduction
 from .outcome import Outcome
 from .parallel_dd import ParallelDD
 from .reduction_exception import ReductionError, ReductionException, ReductionStopped
-from .shared_cache import shared_cache_decorator
 from .splitter import SplitterRegistry
 from .subprocess_test import ConcatTestBuilder, SubprocessTest
