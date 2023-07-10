@@ -90,6 +90,15 @@ class ParallelDD(DD):
         tests = set()
         with ThreadPoolExecutor(self._proc_num) as pool:
             for i in self._config_iterator(n):
+                results, tests = wait(tests, timeout=0 if len(tests) < self._proc_num else None, return_when=FIRST_COMPLETED)
+                for result in results:
+                    index, outcome = result.result()
+                    if outcome is Outcome.FAIL:
+                        fvalue = index
+                        break
+                if fvalue < n:
+                    break
+
                 if i >= 0:
                     config_id = (f'r{run}', f's{i}')
                     config_set = subsets[i]
@@ -109,16 +118,6 @@ class ParallelDD(DD):
 
                 self._check_stop()
                 tests.add(pool.submit(self._test_config_with_index, i, config_set, config_id))
-
-                if len(tests) >= self._proc_num:
-                    results, tests = wait(tests, return_when=FIRST_COMPLETED)
-                    for result in results:
-                        index, outcome = result.result()
-                        if outcome is Outcome.FAIL:
-                            fvalue = index
-                            break
-                    if fvalue < n:
-                        break
 
             results, _ = wait(tests, return_when=ALL_COMPLETED)
             if fvalue == n:
