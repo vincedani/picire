@@ -8,6 +8,7 @@
 
 import argparse
 import codecs
+import json
 import os
 import sys
 import time
@@ -36,6 +37,10 @@ from .parallel_dd import ParallelDD
 from .reduction_exception import ReductionException, ReductionStopped
 from .splitter import SplitterRegistry
 from .subprocess_test import ConcatTestBuilder, SubprocessTest
+
+from .events.event_listener import EventListener
+from .events.stats import Statistics
+from .events.logger import Logger
 
 logger = logging.getLogger('picire')
 __version__ = metadata.version(__package__)
@@ -110,6 +115,8 @@ def create_parser():
                         help='working directory (default: input.timestamp)')
     parser.add_argument('--no-cleanup', dest='cleanup', default=True, action='store_false',
                         help='disable the removal of generated temporary files')
+    parser.add_argument('--statistics', metavar='STATFILE', default=None,
+                        help='gather statistics during reduction and export in JSON format')
     return parser
 
 
@@ -213,7 +220,8 @@ def reduce(src, *,
            reduce_class, reduce_config,
            tester_class, tester_config,
            atom='line',
-           cache_class=None, cache_config=None):
+           cache_class=None, cache_config=None,
+           observer=None):
     """
     Execute picire as if invoked from command line, however, control its
     behaviour not via command line arguments but function parameters.
@@ -231,6 +239,8 @@ def reduce(src, *,
     :param cache_class: Reference to the cache class to use.
     :param cache_config: Dictionary containing information to initialize the
         cache_class.
+    :param observer: Observer for events that will broadcast them for subsribed
+        event handlers.
     :return: The contents of the minimal test case.
     :raises ReductionException: If reduction could not run until completion. The
         ``result`` attribute of the exception contains the contents of the
@@ -260,6 +270,7 @@ def reduce(src, *,
         dd = reduce_class(tester_class(test_builder=test_builder, **tester_config),
                           cache=cache,
                           id_prefix=(f'a{atom_cnt}',),
+                          observer=observer,
                           **reduce_config)
         try:
             min_set = dd(list(range(len(src))))
@@ -278,13 +289,37 @@ def reduce(src, *,
     return src
 
 
-def postprocess(args, out_src):
+def postprocess(args, out_src, statistics):
     if args.cleanup:
         rmtree(join(args.out, 'tests'))
 
     output = join(args.out, basename(args.input))
     with codecs.open(output, 'w', encoding=args.encoding, errors='ignore') as f:
         f.write(out_src)
+
+    if args.statistics:
+        statistics['path_input'] = args.input
+        statistics['path_output'] = output
+
+        statistics['bytes_input'] = len(args.src)
+        statistics['bytes_output'] = len(out_src)
+
+        statistics['nws_input'] = sum(len(word) for line in args.src.splitlines() for word in line.split())
+        statistics['nws_output'] = sum(len(word) for line in out_src.splitlines() for word in line.split())
+
+        statistics['reducer'] = f'{__name__}-{__version__}'
+        statistics['args'] = args.reduce_config
+        statistics['args']['atom'] = args.atom
+
+        for key in statistics['args']:
+            item = statistics['args'][key]
+            statistics['args'][key] = item.__name__ if hasattr(item, '__name__') else str(item)
+
+        content = json.dumps(statistics, indent=4, sort_keys=True)
+        with open(args.statistics, 'w') as f:
+            f.write(content)
+
+        logger.info(f'Statistics is saved to: {args.statistics}')
 
     logger.info('Output saved to %s', output)
 
@@ -306,6 +341,13 @@ def execute():
     except ValueError as e:
         parser.error(e)
 
+    observer = EventListener()
+    observer.subsribe(Logger())
+
+    stat_handler = Statistics()
+    if args.statistics:
+        observer.subsribe(stat_handler)
+
     try:
         out_src = reduce(args.src,
                          reduce_class=args.reduce_class,
@@ -314,9 +356,10 @@ def execute():
                          tester_config=args.tester_config,
                          atom=args.atom,
                          cache_class=args.cache_class,
-                         cache_config=args.cache_config)
-        postprocess(args, out_src)
+                         cache_config=args.cache_config,
+                         observer=observer)
+        postprocess(args, out_src, stat_handler.flush())
     except ReductionException as e:
-        postprocess(args, e.result)
+        postprocess(args, e.result, stat_handler.flush())
         if not isinstance(e, ReductionStopped):
             sys.exit(1)

@@ -14,6 +14,7 @@ from .iterator import CombinedIterator
 from .outcome import Outcome
 from .splitter import ZellerSplit
 from .reduction_exception import ReductionError, ReductionStopped
+from .events.event_listener import EventListener
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class DD(object):
     """
 
     def __init__(self, test, *, split=None, cache=None, id_prefix=None,
-                 config_iterator=None, dd_star=False, stop=None):
+                 config_iterator=None, dd_star=False, stop=None, observer=None):
         """
         Initialize a DD object.
 
@@ -45,6 +46,7 @@ class DD(object):
         self._config_iterator = config_iterator or CombinedIterator()
         self._dd_star = dd_star
         self._stop = stop
+        self._observer = observer or EventListener()
 
     def __call__(self, config):
         """
@@ -58,15 +60,15 @@ class DD(object):
             reduction.
         """
         for iter_cnt in itertools.count():
-            logger.info('Iteration #%d', iter_cnt)
+            self._observer.notify('iteration_started', { 'iteration': iter_cnt, 'configuration': config})
+
             self._iteration_prefix = self._id_prefix + (f'i{iter_cnt}',)
             changed = False
             subsets = [config]
             complement_offset = 0
 
             for run in itertools.count():
-                logger.info('Run #%d', run)
-                logger.info('\tConfig size: %d', len(config))
+                self._observer.notify('cycle_started', { 'iteration': iter_cnt, 'cycle': run, 'configuration': subsets})
                 assert self._test_config(config, (f'r{run}', 'assert')) is Outcome.FAIL
 
                 # Minimization ends if the configuration is already reduced to a single unit.
@@ -98,7 +100,7 @@ class DD(object):
                     subsets = next_subsets
                     config = [c for s in subsets for c in s]
 
-                    logger.info('\tReduced')
+                    self._observer.notify('succesful_reduction', { 'configuration': config})
 
                 elif len(subsets) < len(config):
                     # No interesting configuration is found but it is still not the finest splitting, start new iteration.
@@ -106,7 +108,7 @@ class DD(object):
                     complement_offset = (complement_offset * len(next_subsets)) // len(subsets)
                     subsets = next_subsets
 
-                    logger.info('\tIncreased granularity')
+                    self._observer.notify('configuration_split', { 'configuration': subsets})
 
                 else:
                     # Current iteration ends if no interesting configuration was found by the finest splitting.
@@ -115,7 +117,7 @@ class DD(object):
             if not self._dd_star or not changed:
                 break
 
-        logger.info('\tDone')
+        self._observer.notify('finished', { 'reason' : 'done', 'result': config })
         return config
 
     def _reduce_config(self, run, subsets, complement_offset):
@@ -185,7 +187,10 @@ class DD(object):
         """
         cached_result = self._cache.lookup(config)
         if cached_result is not None:
-            logger.debug('\t[ %s ]: cache = %r', self._pretty_config_id(self._iteration_prefix + config_id), cached_result.name)
+            self._observer.notify('cache_lookup', {
+                'configuration': config,
+                'configuration_id': self._pretty_config_id(self._iteration_prefix + config_id),
+                'outcome' : cached_result})
 
         return cached_result
 
@@ -200,9 +205,12 @@ class DD(object):
         """
         config_id = self._iteration_prefix + config_id
 
-        logger.debug('\t[ %s ]: test...', self._pretty_config_id(config_id))
+        self._observer.notify('test_started', { 'configuration': config, 'configuration_id': self._pretty_config_id(config_id)})
         outcome = self._test(config, config_id)
-        logger.debug('\t[ %s ]: test = %r', self._pretty_config_id(config_id), outcome.name)
+        self._observer.notify('test_finished', {
+            'configuration': config,
+            'configuration_id': self._pretty_config_id(config_id),
+            'outcome' : outcome})
 
         if 'assert' not in config_id:
             self._cache.add(config, outcome)

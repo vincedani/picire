@@ -6,8 +6,6 @@
 # This file may not be copied, modified, or distributed except
 # according to those terms.
 
-import logging
-
 from concurrent.futures import ALL_COMPLETED, FIRST_COMPLETED, ThreadPoolExecutor, wait
 from os import cpu_count
 from threading import Lock
@@ -15,8 +13,6 @@ from threading import Lock
 from .cache import OutcomeCache
 from .dd import DD
 from .outcome import Outcome
-
-logger = logging.getLogger(__name__)
 
 
 class SharedCache(OutcomeCache):
@@ -54,7 +50,7 @@ class ParallelDD(DD):
 
     def __init__(self, test, *, split=None, cache=None, id_prefix=None,
                  config_iterator=None, dd_star=False, stop=None,
-                 proc_num=None):
+                 proc_num=None, observer=None):
         """
         Initialize a ParallelDD object.
 
@@ -68,7 +64,7 @@ class ParallelDD(DD):
         :param stop: A callable invoked before the execution of every test.
         :param proc_num: The level of parallelization.
         """
-        super().__init__(test=test, split=split, cache=cache, id_prefix=id_prefix, config_iterator=config_iterator, dd_star=dd_star, stop=stop)
+        super().__init__(test=test, split=split, cache=cache, id_prefix=id_prefix, config_iterator=config_iterator, dd_star=dd_star, stop=stop, observer=observer)
         self._cache = SharedCache(self._cache)
 
         self._proc_num = proc_num or cpu_count()
