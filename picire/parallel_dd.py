@@ -82,17 +82,18 @@ class ParallelDD(DD):
             next complement_offset).
         """
         n = len(subsets)
-        fvalue = n
         tests = set()
+        interesting_indices = [n]
+
         with ThreadPoolExecutor(self._proc_num) as pool:
             for i in self._config_iterator(n):
                 results, tests = wait(tests, timeout=0 if len(tests) < self._proc_num else None, return_when=FIRST_COMPLETED)
                 for result in results:
                     index, outcome = result.result()
                     if outcome is Outcome.FAIL:
-                        fvalue = index
-                        break
-                if fvalue < n:
+                        interesting_indices.append(index)
+
+                if len(interesting_indices) > 1:
                     break
 
                 if i >= 0:
@@ -109,19 +110,20 @@ class ParallelDD(DD):
                 if outcome is Outcome.PASS:
                     continue
                 if outcome is Outcome.FAIL:
-                    fvalue = i
+                    interesting_indices.append(i)
                     break
 
                 self._check_stop()
                 tests.add(pool.submit(self._test_config_with_index, i, config_set, config_id))
 
             results, _ = wait(tests, return_when=ALL_COMPLETED)
-            if fvalue == n:
-                for result in results:
-                    index, outcome = result.result()
-                    if outcome is Outcome.FAIL:
-                        fvalue = index
-                        break
+
+            for result in results:
+                index, outcome = result.result()
+                if outcome is Outcome.FAIL:
+                    interesting_indices.append(index)
+
+        fvalue = min(interesting_indices)
 
         # fvalue contains the index of the cycle in the previous loop
         # which was found interesting. Otherwise it's n.
