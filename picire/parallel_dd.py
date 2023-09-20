@@ -45,6 +45,10 @@ class SharedCache(OutcomeCache):
         with self._lock:
             self._cache.clean(config)
 
+    def get_size(self):
+        with self._lock:
+            return self._cache.get_size()
+
     def __str__(self):
         with self._lock:
             return self._cache.__str__()

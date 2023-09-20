@@ -15,28 +15,36 @@ logger = logging.getLogger(__name__)
 
 class Logger(EventHandler):
 
-    def iteration_started(self, iteration : int, configuration : list) -> None:
+    def iteration_started(self, iteration: int, **kwargs) -> None:
         logger.info(f'Iteration {iteration}')
 
-    def cycle_started(self, iteration : int, cycle : int, configuration : list) -> None:
+    def cycle_started(self, cycle: int, configuration: list, **kwargs) -> None:
         logger.info(f'Run {cycle}')
         logger.info(f'\t Config size: {len(configuration)}')
 
-    def finished(self, reason : str, result : str) -> None:
+    def finished(self, reason: str, result: str) -> None:
         logger.info(f'\t Stopped: {reason}')
         logger.info(f'\t Size of the result: {len(result)}')
 
-    def succesful_reduction(self, configuration : list) -> None:
+    def succesful_reduction(self, configuration: list) -> None:
         logger.info(f'\t Reduced to: {len(configuration)}')
 
-    def configuration_split(self, configuration : list) -> None:
+    def configuration_split(self, **kwargs) -> None:
         logger.info('\t Increased granularity')
 
-    def test_started(self, configuration : list, configuration_id : str) -> None:
+    def test_started(self, configuration_id: str, **kwargs) -> None:
         logger.debug(f'\t [{configuration_id}]: test...')
 
-    def test_finished(self, configuration : list, configuration_id : str, outcome : Outcome) -> None:
+    def test_finished(self, configuration_id: str, outcome: Outcome, **kwargs) -> None:
         logger.debug(f'\t [{configuration_id}]: test = {outcome.name}')
 
-    def cache_lookup(self, configuration : list, configuration_id : str, outcome : Outcome) -> None:
+    def cache_lookup(self, configuration_id: str, outcome: Outcome, **kwargs) -> None:
         logger.debug(f'\t [{configuration_id}]: cache = {outcome.name}')
+
+    def cache_insert(self,
+                     configuration_id: str,
+                     outcome: Outcome,
+                     size: int,
+                     length: int,
+                     **kwargs) -> None:
+        logger.debug(f'\t [{configuration_id}]: cache => {outcome.name} (cache: {length} items, {size} bytes)')

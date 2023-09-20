@@ -11,6 +11,7 @@ from time import time
 from .events import EventHandler
 from picire.outcome import Outcome
 
+
 class SharedCounter(object):
     def __init__(self, value):
         self._value = Value('i', value)
@@ -23,6 +24,9 @@ class SharedCounter(object):
     def __int__(self):
         return self._value.value
 
+    def __lt__(self, other: int):
+        return self._value.value < other
+
     def __str__(self):
         return str(self._value.value)
 
@@ -32,6 +36,7 @@ class Statistics(EventHandler):
     Event handler implementation that collects statistics during reduction.
     The gathered information can be accessed via `flush` function.
     """
+
     def __init__(self, counterclass=SharedCounter):
         # Number of executed tests: equals to passing_tests + failing_tests in
         # single process mode, but not necessarily in parallel mode because not all
@@ -41,6 +46,8 @@ class Statistics(EventHandler):
         self.tests_failed = counterclass(0)
 
         self.cache_hits = counterclass(0)
+        self.cache_items = counterclass(0)
+        self.cache_size = counterclass(0)
 
         self.runtime = None
         self._start_time = time()
@@ -48,32 +55,39 @@ class Statistics(EventHandler):
         self.iterations = counterclass(0)
         self.cycles = counterclass(0)
 
-    def iteration_started(self, iteration : int, configuration : list) -> None:
+    def iteration_started(self, **kwargs) -> None:
         self.iterations += 1
 
-    def cycle_started(self, iteration : int, cycle : int, configuration : list) -> None:
+    def cycle_started(self, **kwargs) -> None:
         self.cycles += 1
 
-    def finished(self, reason : str, result : str) -> None:
+    def finished(self, **kwargs) -> None:
         self.runtime = round(time() - self._start_time, 2)
 
-    def succesful_reduction(self, configuration : list) -> None:
+    def succesful_reduction(self, **kwargs) -> None:
         pass
 
-    def configuration_split(self, configuration : list) -> None:
+    def configuration_split(self, **kwargs) -> None:
         pass
 
-    def test_started(self, configuration : list, configuration_id : str) -> None:
+    def test_started(self, **kwargs) -> None:
         self.tests_started += 1
 
-    def test_finished(self, configuration : list, configuration_id : str, outcome : Outcome) -> None:
+    def test_finished(self, outcome: Outcome, **kwargs) -> None:
         if outcome is Outcome.FAIL:
             self.tests_failed += 1
         else:
             self.tests_passed += 1
 
-    def cache_lookup(self, configuration : list, configuration_id : str, outcome : Outcome) -> None:
+    def cache_lookup(self, **kwargs) -> None:
         self.cache_hits += 1
+
+    def cache_insert(self, size: int, length: int, **kwargs) -> None:
+        if self.cache_size < size:
+            self.cache_size = size
+
+        if self.cache_items < length:
+            self.cache_items = length
 
     def flush(self):
         stats = dict([(x, y) for x, y in vars(self).items() if not x.startswith('_')])

@@ -87,3 +87,20 @@ class EventHandler(ABC):
         :param outcome: Outcome of the cache (FAIL or PASS, or None if cache miss).
         """
         pass
+
+    @abstractmethod
+    def cache_insert(self,
+                     configuration : list,
+                     configuration_id : str,
+                     outcome : Outcome,
+                     size: int,
+                     length: int) -> None:
+        """
+        A cache lookup has been performed and its result.
+        :param configuration: Configuration to be searched.
+        :param configuration_id: Unique identifier of the configuration.
+        :param outcome: Outcome of the cache (FAIL or PASS, or None if cache miss).
+        :param size: Size of the cache (bytes).
+        :param length: Number of entries in cache.
+        """
+        pass

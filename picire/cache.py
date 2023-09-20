@@ -10,6 +10,11 @@ from hashlib import sha3_256
 
 from .outcome import Outcome
 
+from sys import setrecursionlimit
+from pympler.asizeof import asizeof as _asizeof, flatsize as _flatsize
+
+setrecursionlimit(100000) # ConfigCache needs this hack.
+
 
 class CacheRegistry(object):
     registry = {}
@@ -69,6 +74,12 @@ class OutcomeCache(object):
         """
         raise NotImplementedError()
 
+    def get_size(self):
+        """
+        Returns the total size of the stored cache data and the cache entry count.
+        """
+        raise NotImplementedError()
+
 
 @CacheRegistry.register('none')
 class NoCache(OutcomeCache):
@@ -102,6 +113,12 @@ class NoCache(OutcomeCache):
 
     def __str__(self):
         return '{}'
+
+    def get_size(self):
+        """
+        Returns the total size of the stored cache data and the cache entry count.
+        """
+        0, 0
 
 
 @CacheRegistry.register('config')
@@ -197,6 +214,18 @@ class ConfigCache(OutcomeCache):
         s.append('}')
         return ''.join(s)
 
+    def get_size(self):
+        def _traversal(node, tsize=0, tcount=0):
+            tsize += _flatsize(node)
+            tcount += 1
+
+            for e in node.tail.values():
+                tsize, tcount = _traversal(e, tsize, tcount)
+
+            return tsize, tcount
+
+        return _traversal(self._root)
+
 
 @CacheRegistry.register('config-tuple')
 class ConfigTupleCache(OutcomeCache):
@@ -243,6 +272,9 @@ class ConfigTupleCache(OutcomeCache):
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
+
+    def get_size(self):
+        return _asizeof(self._container), len(self._container)
 
 
 @CacheRegistry.register('content')
@@ -295,6 +327,9 @@ class ContentCache(OutcomeCache):
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
+
+    def get_size(self):
+        return _asizeof(self._container), len(self._container)
 
 
 @CacheRegistry.register('content-hash')
@@ -358,3 +393,6 @@ class ContentHashCache(OutcomeCache):
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{h.hex()}/{l}: {r.name!r},\n' for h, (r, l) in sorted(self._container.items()))
+
+    def get_size(self):
+        return _asizeof(self._container), len(self._container)
