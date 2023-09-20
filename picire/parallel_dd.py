@@ -41,6 +41,10 @@ class SharedCache(OutcomeCache):
         with self._lock:
             self._cache.clear()
 
+    def clean(self, config):
+        with self._lock:
+            self._cache.clean(config)
+
     def __str__(self):
         with self._lock:
             return self._cache.__str__()
@@ -83,17 +87,16 @@ class ParallelDD(DD):
         """
         n = len(subsets)
         tests = set()
-        interesting_indices = [n]
+
+        progress = []
+        get_fails = lambda : [p[0] for p in progress if p[1] == Outcome.FAIL]
 
         with ThreadPoolExecutor(self._proc_num) as pool:
             for i in self._config_iterator(n):
                 results, tests = wait(tests, timeout=0 if len(tests) < self._proc_num else None, return_when=FIRST_COMPLETED)
-                for result in results:
-                    index, outcome = result.result()
-                    if outcome is Outcome.FAIL:
-                        interesting_indices.append(index)
+                self._process_results(results, progress)
 
-                if len(interesting_indices) > 1:
+                if len(get_fails()) > 0:
                     break
 
                 if i >= 0:
@@ -110,21 +113,23 @@ class ParallelDD(DD):
                 if outcome is Outcome.PASS:
                     continue
                 if outcome is Outcome.FAIL:
-                    interesting_indices.append(i)
+                    progress.append((i, outcome))
                     break
 
                 self._check_stop()
+
+                progress.append((i, None))
                 tests.add(pool.submit(self._test_config_with_index, i, config_set, config_id))
 
             results, _ = wait(tests, return_when=ALL_COMPLETED)
+            self._process_results(results, progress)
 
-            for result in results:
-                index, outcome = result.result()
-                if outcome is Outcome.FAIL:
-                    interesting_indices.append(index)
+        interesting_indices = get_fails()
 
-        fvalue = min(interesting_indices)
+        if not len(interesting_indices):
+            return None, complement_offset
 
+        fvalue = interesting_indices[0]
         # fvalue contains the index of the cycle in the previous loop
         # which was found interesting. Otherwise it's n.
         if fvalue < 0:
@@ -136,7 +141,15 @@ class ParallelDD(DD):
             # Interesting subset is found.
             return [subsets[fvalue]], 0
 
-        return None, complement_offset
-
     def _test_config_with_index(self, index, config, config_id):
         return index, self._test_config(config, config_id)
+
+    def _process_results(self, results, progress):
+        for result in results:
+            index, outcome = result.result()
+            if outcome == Outcome.PASS:
+                progress.remove((index, None))
+                continue
+
+            index_to_modify = [p[0] for p in progress].index(index)
+            progress[index_to_modify] = (index, outcome)

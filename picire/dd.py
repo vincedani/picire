@@ -99,6 +99,7 @@ class DD(object):
                     # Interesting configuration is found, continue reduction with this configuration.
                     subsets = next_subsets
                     config = [c for s in subsets for c in s]
+                    self._cache.clean(config)
 
                     self._observer.notify('succesful_reduction', { 'configuration': config})
 

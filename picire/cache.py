@@ -61,6 +61,14 @@ class OutcomeCache(object):
         """
         raise NotImplementedError()
 
+    def clean(self, config):
+        """
+        Delete cache entries that are larger than the current one.
+
+        :param config: The configuration from wich larger entries are deleted.
+        """
+        raise NotImplementedError()
+
 
 @CacheRegistry.register('none')
 class NoCache(OutcomeCache):
@@ -87,6 +95,9 @@ class NoCache(OutcomeCache):
         return None
 
     def clear(self):
+        pass
+
+    def clean(self, config):
         pass
 
     def __str__(self):
@@ -138,13 +149,6 @@ class ConfigCache(OutcomeCache):
     def set_test_builder(self, test_builder):
         pass
 
-    def _evict(self, p, length):
-        if length == 0:
-            p.tail = {}
-        else:
-            for e in p.tail.values():
-                self._evict(e, length - 1)
-
     def add(self, config, result):
         if result is Outcome.PASS or self._cache_fail:
             p = self._root
@@ -153,9 +157,6 @@ class ConfigCache(OutcomeCache):
                     p.tail[cs] = self._Entry()
                 p = p.tail[cs]
             p.result = result
-
-        if result is Outcome.FAIL and self._evict_after_fail:
-            self._evict(self._root, len(config))
 
     def lookup(self, config):
         p = self._root
@@ -167,6 +168,19 @@ class ConfigCache(OutcomeCache):
 
     def clear(self):
         self._root = self._Entry()
+
+    def clean(self, config):
+        def _evict(p, length):
+            if length == 0:
+                p.tail = {}
+            else:
+                for e in p.tail.values():
+                    _evict(e, length - 1)
+
+        if not self._evict_after_fail:
+            return
+
+        _evict(self._root, len(config))
 
     def __str__(self):
         def _str(p):
@@ -212,17 +226,20 @@ class ConfigTupleCache(OutcomeCache):
         if result is Outcome.PASS or self._cache_fail:
             self._container[tuple(config)] = result
 
-        if result is Outcome.FAIL and self._evict_after_fail:
-            length = len(config)
-            evicted = [c for c in self._container if len(c) > length]
-            for c in evicted:
-                del self._container[c]
-
     def lookup(self, config):
         return self._container.get(tuple(config), None)
 
     def clear(self):
         self._container = {}
+
+    def clean(self, config):
+        if not self._evict_after_fail:
+            return
+
+        length = len(config)
+        evicted = [c for c in self._container if len(c) > length]
+        for c in evicted:
+            del self._container[c]
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
@@ -261,17 +278,20 @@ class ContentCache(OutcomeCache):
         if result is Outcome.PASS or self._cache_fail:
             self._container[test_content] = result
 
-        if result is Outcome.FAIL and self._evict_after_fail:
-            length = len(test_content)
-            evicted = [c for c in self._container if len(c) > length]
-            for c in evicted:
-                del self._container[c]
-
     def lookup(self, config):
         return self._container.get(self._test_builder(config), None)
 
     def clear(self):
         pass
+
+    def clean(self, config):
+        if not self._evict_after_fail:
+            return
+
+        length = len(self._test_builder(config))
+        evicted = [c for c in self._container if len(c) > length]
+        for c in evicted:
+            del self._container[c]
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
@@ -319,17 +339,22 @@ class ContentHashCache(OutcomeCache):
         if result is Outcome.PASS:
             self._container[self._hash_content(test_content)] = (result, length)
 
-        if result is Outcome.FAIL and self._evict_after_fail:
-            evicted = [h for h, (_, l) in self._container.items() if l > length]
-            for h in evicted:
-                del self._container[h]
-
     def lookup(self, config):
         result, _ = self._container.get(self._hash_content(self._test_builder(config)), (None, None))
         return result
 
     def clear(self):
         pass
+
+    def clean(self, config):
+        if not self._evict_after_fail:
+            return
+
+        length = len(self._test_builder(config))
+
+        evicted = [h for h, (_, l) in self._container.items() if l > length]
+        for h in evicted:
+            del self._container[h]
 
     def __str__(self):
         return '{\n%s}' % ''.join(f'\t{h.hex()}/{l}: {r.name!r},\n' for h, (r, l) in sorted(self._container.items()))
