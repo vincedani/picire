@@ -309,7 +309,6 @@ def postprocess(args, out_src, statistics):
 
         statistics['reducer'] = f'{__name__}-{__version__}'
         statistics['args'] = args.reduce_config
-        statistics['args']['atom'] = args.atom
 
         for key in statistics['args']:
             item = statistics['args'][key]
