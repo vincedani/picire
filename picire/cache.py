@@ -305,13 +305,16 @@ class ContentCache(OutcomeCache):
         if result is Outcome.FAIL and not self._cache_fail and not self._evict_after_fail:
             return
 
-        test_content = self._test_builder(config)
+        # TODO (23114): Temporary tweaks: save the config -> content transformation and do it in an outer
+        # level! Needs some adjustments later.
+        test_content = config # self._test_builder(config)
 
         if result is Outcome.PASS or self._cache_fail:
             self._container[test_content] = result
 
     def lookup(self, config):
-        return self._container.get(self._test_builder(config), None)
+        test_content = config
+        return self._container.get(test_content, None)
 
     def clear(self):
         pass
@@ -368,14 +371,17 @@ class ContentHashCache(OutcomeCache):
         if result is Outcome.FAIL and not self._evict_after_fail:
             return
 
-        test_content = self._test_builder(config)
+        # TODO (23114): Temporary tweaks: save the config -> content transformation and do it in an outer
+        # level! Needs some adjustments later.
+        test_content = config # self._test_builder(config)
         length = len(test_content)
 
         if result is Outcome.PASS:
             self._container[self._hash_content(test_content)] = (result, length)
 
     def lookup(self, config):
-        result, _ = self._container.get(self._hash_content(self._test_builder(config)), (None, None))
+        test_content = config # self._test_builder(config)
+        result, _ = self._container.get(self._hash_content(test_content), (None, None))
         return result
 
     def clear(self):

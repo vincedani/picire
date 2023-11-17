@@ -145,10 +145,13 @@ class DD(object):
                 i = -i - 1
 
             # Get the outcome either from cache or by testing it.
-            outcome = self._lookup_cache(config_set, config_id)
+            # TODO (23114): Temporary tweaks: save the config -> content transformation and do it in an outer
+            # level! Needs some adjustments later.
+            content = self._cache._test_builder(config_set)
+            outcome = self._lookup_cache(content, config_id)
             if outcome is None:
                 self._check_stop()
-                outcome = self._test_config(config_set, config_id)
+                outcome = self._test_config(content, config_id)
             if outcome is Outcome.FAIL:
                 fvalue = i
                 break

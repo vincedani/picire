@@ -113,7 +113,8 @@ class ParallelDD(DD):
                     i = -i - 1
 
                 # If we checked this test before, return its result
-                outcome = self._lookup_cache(config_set, config_id)
+                content = self._cache._cache._test_builder(config_set)
+                outcome = self._lookup_cache(content, config_id)
                 if outcome is Outcome.PASS:
                     continue
                 if outcome is Outcome.FAIL:
@@ -123,7 +124,7 @@ class ParallelDD(DD):
                 self._check_stop()
 
                 progress.append((i, None))
-                tests.add(pool.submit(self._test_config_with_index, i, config_set, config_id))
+                tests.add(pool.submit(self._test_config_with_index, i, content, config_id))
 
             results, _ = wait(tests, return_when=ALL_COMPLETED)
             self._process_results(results, progress)

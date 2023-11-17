@@ -56,7 +56,8 @@ class SubprocessTest(object):
         os.makedirs(test_dir, exist_ok=True)
 
         with codecs.open(test_path, 'w', encoding=self.encoding, errors='ignore') as f:
-            f.write(self.test_builder(config))
+            # f.write(self.test_builder(config))
+            f.write(config)
 
         args = []
         for arg in self.command_pattern:
