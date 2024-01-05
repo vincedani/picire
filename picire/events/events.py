@@ -43,7 +43,7 @@ class EventHandler(ABC):
         pass
 
     @abstractmethod
-    def succesful_reduction(self, configuration : list) -> None:
+    def successful_reduction(self, configuration : list) -> None:
         """
         A successful reduction step has been performed.
         :param configuration: Newly found, failing configuration.

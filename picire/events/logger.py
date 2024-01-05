@@ -28,7 +28,7 @@ class Logger(EventHandler):
         self.logger.info(f'\t Stopped: {reason}')
         self.logger.info(f'\t Size of the result: {len(result)}')
 
-    def succesful_reduction(self, configuration: list) -> None:
+    def successful_reduction(self, configuration: list) -> None:
         self.logger.info(f'\t Reduced to: {len(configuration)}')
 
     def configuration_split(self, **kwargs) -> None:

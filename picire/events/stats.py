@@ -64,7 +64,7 @@ class Statistics(EventHandler):
     def finished(self, **kwargs) -> None:
         self.runtime = round(time() - self._start_time, 2)
 
-    def succesful_reduction(self, **kwargs) -> None:
+    def successful_reduction(self, **kwargs) -> None:
         pass
 
     def configuration_split(self, **kwargs) -> None:

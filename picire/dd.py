@@ -101,7 +101,7 @@ class DD(object):
                     config = [c for s in subsets for c in s]
                     self._cache.clean(config)
 
-                    self._observer.notify('succesful_reduction', { 'configuration': config})
+                    self._observer.notify('successful_reduction', { 'configuration': config})
 
                 elif len(subsets) < len(config):
                     # No interesting configuration is found but it is still not the finest splitting, start new iteration.
