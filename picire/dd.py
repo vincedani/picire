@@ -218,15 +218,13 @@ class DD(object):
 
         if 'assert' not in config_id:
             self._cache.add(config, outcome)
-            size, length = self._cache.get_size()
+            length = self._cache.get_size()
             self._observer.notify('cache_insert', {
                 'configuration': config,
                 'configuration_id': self._pretty_config_id(config_id),
                 'outcome' : outcome,
-                'size': size,
                 'length': length
             })
-            # ide!
 
         return outcome
 

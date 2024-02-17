@@ -11,7 +11,6 @@ from hashlib import sha3_256
 from .outcome import Outcome
 
 from sys import setrecursionlimit
-from pympler.asizeof import asizeof as _asizeof, flatsize as _flatsize
 
 setrecursionlimit(100000) # ConfigCache needs this hack.
 
@@ -215,14 +214,13 @@ class ConfigCache(OutcomeCache):
         return ''.join(s)
 
     def get_size(self):
-        def _traversal(node, tsize=0, tcount=0):
-            tsize += _flatsize(node)
+        def _traversal(node, tcount=0):
             tcount += 1
 
             for e in node.tail.values():
-                tsize, tcount = _traversal(e, tsize, tcount)
+                tcount = _traversal(e, tcount)
 
-            return tsize, tcount
+            return tcount
 
         return _traversal(self._root)
 
@@ -274,7 +272,7 @@ class ConfigTupleCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
 
     def get_size(self):
-        return _asizeof(self._container), len(self._container)
+        return len(self._container)
 
 
 @CacheRegistry.register('content')
@@ -332,7 +330,7 @@ class ContentCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
 
     def get_size(self):
-        return _asizeof(self._container), len(self._container)
+        return len(self._container)
 
 
 @CacheRegistry.register('content-hash')
@@ -401,4 +399,4 @@ class ContentHashCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{h.hex()}/{l}: {r.name!r},\n' for h, (r, l) in sorted(self._container.items()))
 
     def get_size(self):
-        return _asizeof(self._container), len(self._container)
+        return len(self._container)

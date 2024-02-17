@@ -46,7 +46,6 @@ class Logger(EventHandler):
     def cache_insert(self,
                      configuration_id: str,
                      outcome: Outcome,
-                     size: int,
                      length: int,
                      **kwargs) -> None:
-        self.logger.debug(f'\t [{configuration_id}]: cache => {outcome.name} (cache: {length} items, {size} bytes)')
+        self.logger.debug(f'\t [{configuration_id}]: cache => {outcome.name} (cache: {length} items)')
