@@ -239,7 +239,7 @@ def reduce(src, *,
     :param cache_class: Reference to the cache class to use.
     :param cache_config: Dictionary containing information to initialize the
         cache_class.
-    :param observer: Observer for events that will broadcast them for subsribed
+    :param observer: Observer for events that will broadcast them for subscribed
         event handlers.
     :return: The contents of the minimal test case.
     :raises ReductionException: If reduction could not run until completion. The
@@ -341,11 +341,11 @@ def execute():
         parser.error(e)
 
     observer = EventListener()
-    observer.subsribe(Logger())
+    observer.subscribe(Logger())
 
     stat_handler = Statistics()
     if args.statistics:
-        observer.subsribe(stat_handler)
+        observer.subscribe(stat_handler)
 
     try:
         out_src = reduce(args.src,

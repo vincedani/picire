@@ -11,7 +11,7 @@ class EventListener:
     def __init__(self):
         self._handlers = []
 
-    def subsribe(self, handler: EventHandler) -> None:
+    def subscribe(self, handler: EventHandler) -> None:
         self._handlers.append(handler)
 
     def unsubscribe(self, handler: EventHandler) -> None:
