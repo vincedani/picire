@@ -69,7 +69,7 @@ class DD(object):
 
             for run in itertools.count():
                 self._observer.notify('cycle_started', { 'iteration': iter_cnt, 'cycle': run, 'configuration': subsets})
-                assert self._test_config(config, (f'r{run}', 'assert')) is Outcome.FAIL
+                assert self._test_config(self._cache._test_builder(config), (f'r{run}', 'assert')) is Outcome.FAIL
 
                 # Minimization ends if the configuration is already reduced to a single unit.
                 if len(config) < 2:
