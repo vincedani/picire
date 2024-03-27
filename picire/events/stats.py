@@ -47,6 +47,7 @@ class Statistics(EventHandler):
 
         self.cache_hits = counterclass(0)
         self.cache_items = counterclass(0)
+        self.cache_size = counterclass(0)
 
         self.runtime = None
         self._start_time = time()
@@ -81,7 +82,10 @@ class Statistics(EventHandler):
     def cache_lookup(self, **kwargs) -> None:
         self.cache_hits += 1
 
-    def cache_insert(self, length: int, **kwargs) -> None:
+    def cache_insert(self, size: int, length: int, **kwargs) -> None:
+        if self.cache_size < size:
+            self.cache_size = size
+
         if self.cache_items < length:
             self.cache_items = length
 
