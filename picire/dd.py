@@ -226,7 +226,6 @@ class DD(object):
                 'size': size,
                 'length': length
             })
-            # ide!
 
         return outcome
 
