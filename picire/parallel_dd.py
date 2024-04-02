@@ -134,40 +134,7 @@ class ParallelDD(DD):
         if not len(interesting_indices):
             return None, complement_offset
 
-        def _get_subsets_with_fvalue(value):
-            fvalue = value
-            # fvalue contains the index of the cycle in the previous loop
-            # which was found interesting. Otherwise it's n.
-            if fvalue < 0:
-                # Interesting complement is found.
-                # In next run, start removing the following subset
-                fvalue = -fvalue - 1
-                return subsets[:fvalue] + subsets[fvalue + 1:], fvalue
-            if fvalue < n:
-                # Interesting subset is found.
-                fvalue = 0
-                return [subsets[fvalue]], fvalue
-
-        for i, value in enumerate(interesting_indices):
-            _subsets, _fvalue = _get_subsets_with_fvalue(value)
-            # An item has been already removed from the config
-            if i > 0:
-                self._check_stop()
-
-                config_set = [c for si, s in enumerate(subsets) for c in s if si != _fvalue]
-                content = self._cache._cache._test_builder(config_set)
-                outcome = self._lookup_cache(content, config_id)
-                # If the content present in the cache, then no need to retest.
-                if not outcome:
-                    config_id = (f'd{i}', f'f{_fvalue}')
-                    outcome = self._test_config(content, config_id)
-
-                # Greedily removing the "FAILS" doesn't did the magic.
-                if outcome is Outcome.PASS:
-                    continue
-
-            subsets, fvalue = _subsets, _fvalue
-        return subsets, fvalue
+        return self._greedy_search(subsets, n, interesting_indices)
 
     def _test_config_with_index(self, index, config, config_id):
         return index, self._test_config(config, config_id)
@@ -181,3 +148,55 @@ class ParallelDD(DD):
 
             index_to_modify = [p[0] for p in progress].index(index)
             progress[index_to_modify] = (index, outcome)
+
+    def _greedy_search(self, orig_subsets, initial_length, interesting_indices, retest=False):
+        def _get_subsets_with_fvalue(subsets, value):
+            fvalue = value
+            # fvalue contains the index of the cycle in the previous loop
+            # which was found interesting. Otherwise it's n.
+            if fvalue < 0:
+                # Interesting complement is found.
+                # In next run, start removing the following subset
+                fvalue = -fvalue - 1
+                return subsets[:fvalue] + subsets[fvalue + 1:], fvalue
+            if fvalue < initial_length:
+                # Interesting subset is found.
+                fvalue = 0
+                return [subsets[fvalue]], fvalue
+
+        def _perform_test(subsets, index, _fvalue):
+            self._check_stop()
+
+            config_set = [c for s in subsets for c in s]
+            content = self._cache._cache._test_builder(config_set)
+            config_id = (f'd{index}', f'f{_fvalue}')
+            outcome = self._lookup_cache(content, config_id)
+
+            if not outcome:
+                outcome = self._test_config(content, config_id)
+
+            return outcome
+
+        subsets = orig_subsets
+        for i, value in enumerate(interesting_indices):
+            _subsets, _fvalue = _get_subsets_with_fvalue(subsets, value)
+            # DEBUG
+            # outcome = _perform_test(_subsets, i, _fvalue)
+
+            # An item has been already removed from the config
+            if i > 0 and retest:
+                outcome = _perform_test(_subsets, _fvalue, i)
+
+                # Greedily removing the "FAILs" doesn't did the magic.
+                if outcome is Outcome.PASS:
+                    continue
+
+            subsets, fvalue = _subsets, _fvalue
+
+        # Re-test the final result only if the intermediate merges are not tested immediately.
+        if len(interesting_indices) > 1 and not retest:
+            outcome = _perform_test(_subsets, _fvalue, len(interesting_indices) + 1)
+            if outcome is Outcome.PASS:
+                return self._greedy_search(orig_subsets, initial_length, interesting_indices, True)
+
+        return subsets, fvalue
