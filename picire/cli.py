@@ -96,6 +96,8 @@ def create_parser():
                         help='store failing, i.e., interesting test cases in the cache')
     parser.add_argument('--no-cache-evict-after-fail', dest='evict_after_fail', action='store_false', default=True,
                         help='disable the eviction of larger test cases from the cache when a failing, i.e., interesting test case is found')
+    parser.add_argument('--measure-memory', action='store_true', default=False,
+                        help='measure the memory consumption of the cache memory')
 
     # Limits on the reduction.
     parser.add_argument('--limit-time', metavar='SEC', type=int,
@@ -158,7 +160,8 @@ def process_args(args):
 
     args.cache_class = CacheRegistry.registry[args.cache]
     args.cache_config = {'cache_fail': args.cache_fail,
-                         'evict_after_fail': args.evict_after_fail}
+                         'evict_after_fail': args.evict_after_fail,
+                         'measure_memory': args.measure_memory}
 
     if args.limit_time or args.limit_tests:
         stop = LimitReduction(deadline=timedelta(seconds=args.limit_time) if args.limit_time else None,

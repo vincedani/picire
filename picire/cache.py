@@ -88,7 +88,7 @@ class NoCache(OutcomeCache):
     can occur, ever.
     """
 
-    def __init__(self, *, cache_fail=False, evict_after_fail=True):
+    def __init__(self, *, cache_fail=False, evict_after_fail=True, measure_memory=False):
         """
         :param cache_fail: Unused, only added for compatibility with other cache
             implementations.
@@ -150,7 +150,7 @@ class ConfigCache(OutcomeCache):
             self.result = None  # Result so far
             self.tail = {}  # Points to outcome of tail
 
-    def __init__(self, *, cache_fail=False, evict_after_fail=True):
+    def __init__(self, *, cache_fail=False, evict_after_fail=True, measure_memory=False):
         """
         :param cache_fail: Add configurations with FAIL outcome to the cache.
         :param evict_after_fail: When a configuration with a FAIL outcome is
@@ -161,6 +161,7 @@ class ConfigCache(OutcomeCache):
         # cases, and larger tests are never re-tested again.
         self._cache_fail = cache_fail
         self._evict_after_fail = evict_after_fail
+        self.measure_memory = measure_memory
         self._root = self._Entry()
 
     def set_test_builder(self, test_builder):
@@ -215,6 +216,9 @@ class ConfigCache(OutcomeCache):
         return ''.join(s)
 
     def get_size(self):
+        if not self.measure_memory:
+            return 0, 0
+
         def _traversal(node, tsize=0, tcount=0):
             tsize += _flatsize(node)
             tcount += 1
@@ -235,7 +239,7 @@ class ConfigTupleCache(OutcomeCache):
     structure.
     """
 
-    def __init__(self, *, cache_fail=False, evict_after_fail=True):
+    def __init__(self, *, cache_fail=False, evict_after_fail=True, measure_memory=False):
         """
         :param cache_fail: Add configurations with FAIL outcome to the cache.
         :param evict_after_fail: When a configuration with a FAIL outcome is
@@ -246,6 +250,7 @@ class ConfigTupleCache(OutcomeCache):
         # cases, and larger tests are never re-tested again.
         self._cache_fail = cache_fail
         self._evict_after_fail = evict_after_fail
+        self.measure_memory = measure_memory
         self._container = {}
 
     def set_test_builder(self, test_builder):
@@ -274,6 +279,9 @@ class ConfigTupleCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
 
     def get_size(self):
+        if not self.measure_memory:
+            return 0, 0
+
         return _asizeof(self._container), len(self._container)
 
 
@@ -284,7 +292,7 @@ class ContentCache(OutcomeCache):
     configurations) with their test outcomes.
     """
 
-    def __init__(self, *, cache_fail=False, evict_after_fail=True):
+    def __init__(self, *, cache_fail=False, evict_after_fail=True, measure_memory=False):
         """
         :param cache_fail: Add configurations with FAIL outcome to the cache.
         :param evict_after_fail: When a configuration with a FAIL outcome is
@@ -295,6 +303,7 @@ class ContentCache(OutcomeCache):
         # cases, and larger tests are never re-tested again.
         self._cache_fail = cache_fail
         self._evict_after_fail = evict_after_fail
+        self.measure_memory = measure_memory
         self._container = {}
         self._test_builder = None
 
@@ -332,6 +341,9 @@ class ContentCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{c!r}: {r.name!r},\n' for c, r in sorted(self._container.items()))
 
     def get_size(self):
+        if not self.measure_memory:
+            return 0, 0
+
         return _asizeof(self._container), len(self._container)
 
 
@@ -342,7 +354,7 @@ class ContentHashCache(OutcomeCache):
     configurations and hashed afterwards) with their test outcomes.
     """
 
-    def __init__(self, *, cache_fail=False, evict_after_fail=True, hash_ctor=sha3_256):
+    def __init__(self, *, cache_fail=False, evict_after_fail=True, measure_memory=False, hash_ctor=sha3_256):
         """
         :param cache_fail: Unused, only added for compatibility with other cache
             implementations.
@@ -358,6 +370,7 @@ class ContentHashCache(OutcomeCache):
         # cases, and larger tests are never re-tested again.
         self._evict_after_fail = evict_after_fail
         self._hash_ctor = hash_ctor
+        self.measure_memory = measure_memory
         self._container = {}
         self._test_builder = None
 
@@ -401,4 +414,7 @@ class ContentHashCache(OutcomeCache):
         return '{\n%s}' % ''.join(f'\t{h.hex()}/{l}: {r.name!r},\n' for h, (r, l) in sorted(self._container.items()))
 
     def get_size(self):
+        if not self.measure_memory:
+            return 0, 0
+
         return _asizeof(self._container), len(self._container)
