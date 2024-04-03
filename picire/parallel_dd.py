@@ -195,7 +195,7 @@ class ParallelDD(DD):
 
         # Re-test the final result only if the intermediate merges are not tested immediately.
         if len(interesting_indices) > 1 and not retest:
-            outcome = _perform_test(_subsets, _fvalue, len(interesting_indices) + 1)
+            outcome = _perform_test(subsets, fvalue, len(interesting_indices) + 1)
             if outcome is Outcome.PASS:
                 return self._greedy_search(orig_subsets, initial_length, interesting_indices, True)
 
