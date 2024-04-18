@@ -58,7 +58,7 @@ class ParallelDD(DD):
 
     def __init__(self, test, *, split=None, cache=None, id_prefix=None,
                  config_iterator=None, dd_star=False, stop=None,
-                 proc_num=None, observer=None):
+                 proc_num=None, greeddy=False, observer=None):
         """
         Initialize a ParallelDD object.
 
@@ -76,6 +76,8 @@ class ParallelDD(DD):
         self._cache = SharedCache(self._cache)
 
         self._proc_num = proc_num or cpu_count()
+        self.greeddy = greeddy
+
 
     def _reduce_config(self, run, subsets, complement_offset):
         """
@@ -180,6 +182,10 @@ class ParallelDD(DD):
         subsets = orig_subsets
         for i, value in enumerate(interesting_indices):
             _subsets, _fvalue = _get_subsets_with_fvalue(subsets, value)
+            # The not optimal bad, old method
+            if not self.greeddy:
+                return _subsets, _fvalue
+
             # DEBUG
             # outcome = _perform_test(_subsets, i, _fvalue)
 

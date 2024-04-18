@@ -74,6 +74,8 @@ def create_parser():
                         help='test case encoding (default: autodetect)')
     parser.add_argument('--no-dd-star', dest='dd_star', default=True, action='store_false',
                         help='run the ddmin algorithm only once')
+    parser.add_argument('--no-greedy', dest='greeddy', default=True, action='store_false',
+                        help='run the greedy ddmin algorithm')
 
     # Extra settings for parallel reduce.
     parser.add_argument('-p', '--parallel', action='store_true', default=False,
@@ -181,6 +183,7 @@ def process_args(args):
     else:
         args.reduce_class = ParallelDD
         args.reduce_config.update(proc_num=args.jobs)
+        args.reduce_config.update(greeddy=args.greeddy)
 
     logger.info('Input loaded from %s', args.input)
 
