@@ -53,10 +53,13 @@ class Statistics(EventHandler):
         self._start_time = time()
 
         self.iterations = counterclass(0)
+        self.iteration_sizes = []
         self.cycles = counterclass(0)
 
-    def iteration_started(self, **kwargs) -> None:
+
+    def iteration_started(self, configuration, **kwargs) -> None:
         self.iterations += 1
+        self.iteration_sizes.append(len(configuration))
 
     def cycle_started(self, **kwargs) -> None:
         self.cycles += 1
