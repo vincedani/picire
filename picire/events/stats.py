@@ -59,7 +59,12 @@ class Statistics(EventHandler):
 
     def iteration_started(self, configuration, **kwargs) -> None:
         self.iterations += 1
-        self.iteration_sizes.append(len(configuration))
+        payload = {
+            'configuration': len(configuration),
+            'tests_failed': int(self.tests_failed)
+        }
+
+        self.iteration_sizes.append(payload)
 
     def cycle_started(self, **kwargs) -> None:
         self.cycles += 1
